@@ -20,6 +20,11 @@ const I = {
     secTodo: "通知转待办", todoBadge: "剪贴板卡片显示「待办」标记", todoBadgeSub: "复制的文字像群通知（有要做的事、有时间）时，卡片左下角出现标记，点一下生成待办便签；右键「生成待办」不受这个开关影响", todoPaste: "粘贴通知到便签时提示转换", todoPasteSub: "在便签编辑器里粘贴群通知，底部会出现「转成待办」",
     todoLead: "有具体时间的，提前", todoLeadSub: "如「今天下午 14:30 开会」「明天上午下班前上报」", todoDate: "只有日期的，提醒在", todoDateSub: "如「11月27日前反馈」「本周内领取」；那个时间已过时，改为下班前按上一项提前量提醒",
     todoHours: "下班时间", todoHoursSub: "「上午下班前」「下班前」「今天务必」按这里换算", todoNoon: "上午", todoWork: "下午",
+    todoWords: "自定义词", todoWordsSub: "内置规则认不出的说法，在这里补上；每行一个",
+    wVerbs: "动作词", wVerbsPh: "报账\n盖章\n签收", wVerbsSub: "含这些词的文字也算「有事要做」",
+    wPre: "开头去掉的称呼", wPrePh: "各项目部\n各钻井队", wPreSub: "待办开头的「请各项目部」之类会去掉，读起来更干净",
+    wTimes: "时间说法", wTimesPh: "交班前 = 08:00\n例会前 = 周日 07:30", wTimesSub: "写成「说法 = 钟点」，可在钟点前加星期；前面有日期就用那天，没有就取下一次到这个钟点（带星期的取下一个那天）",
+    wBad: "这几行没看懂，会被忽略：", wOk: "已认出 {n} 条",
     l15: "15 分钟", l30: "30 分钟", l60: "1 小时", l120: "2 小时", l1440: "1 天", custom: "自定义", minutes: "分钟", d0_8: "当天 8:00", d0_9: "当天 9:00", d1_9: "前一天 9:00", d1_17: "前一天 17:00", daysBefore: "提前", daysAt: "天，时间",
     secRemind: "提醒快捷项", remindHint: "勾选在便签提醒面板里显示的快捷时间",
     p_m5: "5 分钟后", p_m10: "10 分钟后", p_m15: "15 分钟后", p_m30: "30 分钟后", p_h1: "1 小时后", p_h2: "2 小时后", p_h3: "3 小时后", p_tonight: "今晚 20:00", p_tomorrow: "明天此时", p_tomorrow9: "明早 9:00", p_nextweek: "下周此时",
@@ -52,6 +57,11 @@ const I = {
     secTodo: "Notices to to-dos", todoBadge: "Mark notice-like clipboard cards", todoBadgeSub: "When copied text reads like a group notice (something to do, a time), the card gets a mark at its lower left; click it to make a to-do note. Right-click → Make to-dos works either way", todoPaste: "Offer to convert notices pasted into a note", todoPasteSub: "Paste a group notice in the note editor and a \"Make to-dos\" bar appears",
     todoLead: "With a clock time, remind", todoLeadSub: "e.g. a meeting at 14:30, or \"report by lunch break today\"", todoDate: "Date only, remind at", todoDateSub: "e.g. \"reply by 27 Nov\"; if that time has passed, it falls back to the lead above before the end of the working day",
     todoHours: "Working hours end", todoHoursSub: "Used for \"before the lunch break\", \"before close of work\" and \"today\"", todoNoon: "Morning", todoWork: "Afternoon",
+    todoWords: "Your own words", todoWordsSub: "Phrases the built-in rules miss; one per line",
+    wVerbs: "Action words", wVerbsPh: "报账\n盖章\n签收", wVerbsSub: "Text with these words also counts as \"something to do\"",
+    wPre: "Addressees to drop", wPrePh: "各项目部\n各钻井队", wPreSub: "\"请各项目部…\" at the start of a to-do is dropped so it reads cleanly",
+    wTimes: "Time phrases", wTimesPh: "交班前 = 08:00\n例会前 = 周日 07:30", wTimesSub: "Write \"phrase = time\", optionally with a weekday before the time; after a date it means that day, otherwise the next time that clock time (or weekday) comes round",
+    wBad: "Not understood, will be ignored: ", wOk: "{n} recognised",
     l15: "15 min", l30: "30 min", l60: "1 hour", l120: "2 hours", l1440: "1 day", custom: "Custom", minutes: "min before", d0_8: "Same day 8:00", d0_9: "Same day 9:00", d1_9: "Day before 9:00", d1_17: "Day before 17:00", daysBefore: "", daysAt: "day(s) before, at",
     secRemind: "Reminder presets", remindHint: "Pick the quick times shown in the note reminder popover",
     p_m5: "In 5 min", p_m10: "In 10 min", p_m15: "In 15 min", p_m30: "In 30 min", p_h1: "In 1 hour", p_h2: "In 2 hours", p_h3: "In 3 hours", p_tonight: "Tonight 20:00", p_tomorrow: "Tomorrow, same time", p_tomorrow9: "Tomorrow 9:00", p_nextweek: "Next week",
@@ -308,10 +318,10 @@ function sectionTodo() {
   const ln = numIn(draft.todo_lead_min, 10080, (n) => draft.todo_lead_min = n);
   lc.appendChild(ln); lc.appendChild(document.createTextNode(t("minutes")));
   const leadKey = LEADS.includes(draft.todo_lead_min) ? draft.todo_lead_min : "c";
-  lc.hidden = leadKey !== "c";
+  lc.style.display = (leadKey !== "c") ? "none" : "flex";
   lw.appendChild(seg(leadKey, LEADS.map((v) => [v, t("l" + v)]).concat([["c", t("custom")]]), (v) => {
-    if (v === "c") { lc.hidden = false; ln.focus(); return; }
-    lc.hidden = true; draft.todo_lead_min = parseInt(v, 10); ln.value = draft.todo_lead_min;
+    if (v === "c") { lc.style.display = "flex"; ln.focus(); return; }
+    lc.style.display = "none"; draft.todo_lead_min = parseInt(v, 10); ln.value = draft.todo_lead_min;
   }));
   lw.appendChild(lc);
   st.appendChild(row(t("todoLead"), lw, t("todoLeadSub")));
@@ -325,10 +335,10 @@ function sectionTodo() {
   dc.appendChild(document.createTextNode(t("daysAt")));
   const dt = hhmmIn(draft.todo_date_time || "09:00", (v) => draft.todo_date_time = v); dc.appendChild(dt);
   const dateKey = DATES.some(([k]) => k === cur) ? cur : "c";
-  dc.hidden = dateKey !== "c";
+  dc.style.display = (dateKey !== "c") ? "none" : "flex";
   dw.appendChild(seg(dateKey, DATES.map(([k, l]) => [k, t(l)]).concat([["c", t("custom")]]), (v) => {
-    if (v === "c") { dc.hidden = false; return; }
-    dc.hidden = true; const [d, tm] = v.split("|"); draft.todo_date_days = parseInt(d, 10); draft.todo_date_time = tm; dn.value = d; dt.value = tm;
+    if (v === "c") { dc.style.display = "flex"; return; }
+    dc.style.display = "none"; const [d, tm] = v.split("|"); draft.todo_date_days = parseInt(d, 10); draft.todo_date_time = tm; dn.value = d; dt.value = tm;
   }));
   dw.appendChild(dc);
   st.appendChild(row(t("todoDate"), dw, t("todoDateSub")));
@@ -337,6 +347,29 @@ function sectionTodo() {
   hw.appendChild(document.createTextNode(t("todoNoon"))); hw.appendChild(hhmmIn(draft.todo_noon_off || "12:00", (v) => draft.todo_noon_off = v));
   hw.appendChild(document.createTextNode(t("todoWork"))); hw.appendChild(hhmmIn(draft.todo_work_off || "17:30", (v) => draft.todo_work_off = v));
   st.appendChild(row(t("todoHours"), hw, t("todoHoursSub")));
+
+  // The user's own words (notice.js: verbs / prefixes / times).
+  const wh = document.createElement("div"); wh.className = "sub"; wh.style.margin = "14px 0 6px"; wh.innerHTML = `<b>${t("todoWords")}</b> · ${t("todoWordsSub")}`; st.appendChild(wh);
+  const area = (key, ph, check) => {
+    const box = vbox();
+    const ta = document.createElement("textarea"); ta.className = "set-select"; ta.rows = 3; ta.spellcheck = false;
+    ta.style.cssText = "width:220px;resize:vertical;font:inherit;font-size:13px;line-height:1.5";
+    ta.placeholder = ph; ta.value = draft[key] || "";
+    const msg = document.createElement("div"); msg.className = "sub"; msg.style.cssText = "max-width:220px;text-align:right";
+    const upd = () => {
+      draft[key] = ta.value;
+      if (!check) return;
+      const r = window.NOTICE ? NOTICE.parseTimes(ta.value) : { ok: [], bad: [] };
+      msg.style.color = r.bad.length ? "#c0392b" : "";
+      msg.textContent = r.bad.length ? t("wBad") + r.bad.join("；") : (r.ok.length ? t("wOk").replace("{n}", r.ok.length) : "");
+    };
+    ta.oninput = upd; upd();
+    box.appendChild(ta); box.appendChild(msg);
+    return box;
+  };
+  st.appendChild(row(t("wVerbs"), area("todo_verbs", t("wVerbsPh")), t("wVerbsSub")));
+  st.appendChild(row(t("wPre"), area("todo_prefixes", t("wPrePh")), t("wPreSub")));
+  st.appendChild(row(t("wTimes"), area("todo_times", t("wTimesPh"), true), t("wTimesSub")));
   return st;
 }
 
@@ -474,7 +507,7 @@ window.addEventListener("unhandledrejection", (e) => { const el = document.getEl
 (async function boot() {
   try { const s = await invoke("get_settings"); if (s) cfg = JSON.parse(s); } catch (e) {}
   try { monitors = (await invoke("list_monitors")) || []; } catch (e) {}
-  draft = Object.assign({ history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"], drop_to_hang: true, text_drag_ext: "txt", accent: "terra", move_mod: "shift", fold_by_date: true, hotkey_shot: "Ctrl+Alt+S", tray_icon: "a", update_mode: "notify", skipped_version: "", line_display: "cursor", todo_badge: true, todo_paste: true, todo_lead_min: 60, todo_date_days: 0, todo_date_time: "09:00", todo_noon_off: "12:00", todo_work_off: "17:30" }, cfg);
+  draft = Object.assign({ history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"], drop_to_hang: true, text_drag_ext: "txt", accent: "terra", move_mod: "shift", fold_by_date: true, hotkey_shot: "Ctrl+Alt+S", tray_icon: "a", update_mode: "notify", skipped_version: "", line_display: "cursor", todo_badge: true, todo_paste: true, todo_lead_min: 60, todo_date_days: 0, todo_date_time: "09:00", todo_noon_off: "12:00", todo_work_off: "17:30", todo_verbs: "", todo_prefixes: "", todo_times: "" }, cfg);
   document.documentElement.dataset.accent = draft.accent || "terra";
   previewFont(draft.font_family);
   LANG = pickLang(draft);

@@ -76,6 +76,9 @@ struct Settings {
     todo_date_time: String, // …at HH:MM
     todo_noon_off: String,  // "上午下班" HH:MM
     todo_work_off: String,  // "下班" HH:MM
+    todo_verbs: String,     // the user's extra action words, one per line
+    todo_prefixes: String,  // addressees dropped from the start of a to-do
+    todo_times: String,     // "交班前 = 08:00" / "例会前 = 周日 07:30", one per line
 }
 
 impl Default for Settings {
@@ -114,6 +117,9 @@ impl Default for Settings {
             todo_date_time: "09:00".into(),
             todo_noon_off: "12:00".into(),
             todo_work_off: "17:30".into(),
+            todo_verbs: String::new(),
+            todo_prefixes: String::new(),
+            todo_times: String::new(),
         }
     }
 }

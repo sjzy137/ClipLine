@@ -6,7 +6,11 @@
  *   NOTICE.parse(text, ref, opt)  → { title, tasks:[{text, due}], body, remindAt, firstDue }
  *
  * ref = when the text was copied (ms): "今天 / 明天 / 本周五" count from there.
- * opt = { noonOff:"12:00", workOff:"17:30", leadMin:60, dateDays:0, dateTime:"09:00", now }
+ * opt = { noonOff:"12:00", workOff:"17:30", leadMin:60, dateDays:0, dateTime:"09:00", now,
+ *         verbs, prefixes, times }  — the user's own words, one per line (Settings → Notes):
+ *   verbs     extra action words ("报账")
+ *   prefixes  addressees to drop from the start of a to-do ("各项目部")
+ *   times     "交班前 = 08:00" / "例会前 = 周日 07:30"
  *
  * Matching runs on a normalised copy (full-width digits / colon → ASCII); the
  * replacement is one char for one char, so match positions slice the original.
@@ -20,6 +24,41 @@
   const EVENT = /会议|会议室|开会|召开|座谈|务虚|培训|讲座|活动|集合|参会|出席|报到|考试|宣讲|观摩/;
   const COND = /^(注意|如有|如无|如需|若有|若无|参见|参考|附件|备注|说明|测算时|其中|另外，?如)/;
   const BOOST = /@全体成员|@所有人|^\s*【?通知】?[:：]?|请各|务必|及时|尽快|按时|截止|截至/;
+
+  /* ---------- the user's own words ---------- */
+  let CUR = { verbs: [], prefixes: [], times: [] };
+  const lines = (t) => String(t || "").split(/[\n,，、;；]+/).map((x) => norm(x).trim()).filter(Boolean);
+  const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  /* "交班前 = 08:00", "例会前 = 周日 07:30", "晚班前＝19点半" → {word, wd|null, h, mi}; bad lines come back separately. */
+  function parseTimes(text) {
+    const ok = [], bad = [];
+    String(text || "").split("\n").forEach((raw) => {
+      const l = norm(raw).trim(); if (!l) return;
+      const m = l.match(/^(.+?)\s*[=＝]\s*(?:(?:周|星期|礼拜)\s*([一二三四五六日天1-7])\s*)?(\d{1,2})(?::(\d{2})|点(半|(\d{1,2})分?)?)?$/);
+      const h = m ? +m[3] : 99, mi = m ? (m[4] ? +m[4] : m[5] === "半" ? 30 : m[6] ? +m[6] : 0) : 99;
+      if (!m || h > 23 || mi > 59 || !m[1].trim()) { bad.push(raw.trim()); return; }
+      ok.push({ word: m[1].trim(), wd: m[2] ? WDN[m[2]] : null, h, mi });
+    });
+    ok.sort((a, b) => b.word.length - a.word.length); // longest first: "晚班前" before "晚班"
+    return { ok, bad };
+  }
+  function useOpts(o) {
+    CUR = {
+      verbs: lines(o && o.verbs),
+      prefixes: lines(o && o.prefixes).map((x) => x.replace(/^请/, "")),
+      times: parseTimes(o && o.times).ok,
+    };
+  }
+  function hasVerb(n) { return VERB.test(n) || CUR.verbs.some((v) => n.includes(v)); }
+  /* First custom time phrase in `s` → {index, len, t}. */
+  function customAt(s) {
+    let best = null;
+    CUR.times.forEach((c) => {
+      const i = s.indexOf(c.word);
+      if (i >= 0 && (!best || i < best.index)) best = { index: i, len: c.word.length, t: c };
+    });
+    return best;
+  }
 
   /* ---------- small helpers ---------- */
   function norm(s) {
@@ -136,6 +175,9 @@
     R_TIME.lastIndex = 0;
     const rest = seg.slice(skip);
     const m = R_TIME.exec(rest);
+    const c = customAt(rest);
+    if (c && c.t.wd === null && c.index <= maxGap && (!m || c.index <= m.index))
+      return { skip, t: { i: from + skip + c.index, len: c.len, h: c.t.h, mi: c.t.mi } };
     if (!m || m.index > maxGap) return { skip, t: null };
     const t = timeOf(m, o);
     if (!t) return { skip, t: null };
@@ -178,6 +220,19 @@
       if (!m[1] && !m[6] && !m[7] && !m[8] && !m[9] && !/前|之前/.test(n.slice(j, j + 3))) continue;
       res.push({ i, end: j, date: at(dayStart(ref), t.h, t.mi), hasTime: true, kind: "time" });
     }
+    // The user's own phrases with no date in front: "交班前" (next such time), "例会前" (that weekday).
+    CUR.times.forEach((c) => {
+      let from = 0, i;
+      while ((i = n.indexOf(c.word, from)) >= 0) {
+        const j = i + c.word.length; from = j;
+        if (res.some((r) => i < r.end && r.i < j)) continue;
+        const base = dayStart(ref);
+        let d;
+        if (c.wd !== null) { d = at(inWeek(base, c.wd), c.h, c.mi); if (d < ref) d = addDays(d, 7); }
+        else { d = at(base, c.h, c.mi); if (d < ref) d = addDays(d, 1); }
+        res.push({ i, end: j, date: d, hasTime: true, kind: "custom", before: /前$/.test(c.word) });
+      }
+    });
     // Swallow the words around the span: 于 / 在 before, 前 / 之前 after.
     res.forEach((r) => {
       const after = n.slice(r.end).match(/^\s*(?:之前|以前|前)/);
@@ -250,7 +305,9 @@
     s = stripHead(s);
     s = s.replace(/^\s*[①-⑳]\s*/, "").replace(/^\s*(\d{1,2}[.、]|[（(]\d{1,2}[）)]|[一二三四五六七八九十]{1,3}、)\s*/, "");
     s = s.replace(/^根据[^，,。]{0,40}?(要求|安排|通知|部署|精神)[，,]\s*/, "");
-    s = s.replace(/^请?\s*(各单位|各部门|各基层单位|各二级单位|各中心|各队|各位|大家)(及直属(单位)?)?\s*/, "").replace(/^请\s*/, "");
+    s = s.replace(/^请?\s*(各单位|各部门|各基层单位|各二级单位|各中心|各队|各位|大家)(及直属(单位)?)?\s*/, "");
+    if (CUR.prefixes.length) s = s.replace(new RegExp("^请?\\s*(" + CUR.prefixes.map(reEsc).join("|") + ")(及直属(单位)?)?\\s*"), "");
+    s = s.replace(/^请\s*/, "");
     s = s.replace(/([，,])\s*请(?!示)/g, "$1");
     s = s.replace(/[，,]?\s*(谢谢|多谢|感谢)(大家|配合|支持)?[！!。.~～]*\s*$/, "");
     s = s.replace(/[，,；;。.！!\s]+$/, "").replace(/^[，,；;\s]+/, "");
@@ -259,15 +316,16 @@
   }
 
   /* ---------- public ---------- */
-  function looks(text) {
+  function looks(text, opt) {
+    useOpts(opt);
     const raw = String(text || "");
     if (raw.length < 6 || raw.length > 3000) return false;
     const n = norm(stripNoise(raw));
     if (/^\s*(https?:\/\/|www\.)\S+\s*$/i.test(n)) return false;
     if (/[{};]\s*\n.*[{};]/s.test(n) && /function|const |=>|def |class /.test(n)) return false;
-    if (!VERB.test(n)) return false;
+    if (!hasVerb(n)) return false;
     if (BOOST.test(n)) return true;
-    return dues(n, Date.now(), {}).length > 0;
+    return dues(n, Date.now(), opt || {}).length > 0;
   }
 
   function fmtDue(due, now) {
@@ -278,6 +336,7 @@
 
   function parse(text, ref, opt) {
     const o = Object.assign({ noonOff: "12:00", workOff: "17:30", leadMin: 60, dateDays: 0, dateTime: "09:00" }, opt || {});
+    useOpts(o);
     ref = ref || Date.now();
     const now = o.now || Date.now();
     const src = stripNoise(text).replace(/[ \t]+\n/g, "\n").trim();
@@ -290,7 +349,7 @@
       let main = -1;
       const info = ss.map((s) => {
         const n = norm(s);
-        return { s, n, d: dues(n, ref, o), verb: VERB.test(n), cond: COND.test(stripHead(n).trim()) };
+        return { s, n, d: dues(n, ref, o), verb: hasVerb(n), cond: COND.test(stripHead(n).trim()) };
       });
       // The main sentence: first with a verb and a due, else first with a verb.
       main = info.findIndex((x) => x.verb && x.d.length && !x.cond);
@@ -307,7 +366,7 @@
           // "征订工作已经启动，请…核对": leading clauses with no verb are background.
           if (!ev && !tasks.length && segs.length === 1 && !ctx.length) {
             const cl = txt.split(/[，,]/);
-            let k2 = 0; while (k2 < cl.length - 1 && !VERB.test(norm(cl[k2]))) k2++;
+            let k2 = 0; while (k2 < cl.length - 1 && !hasVerb(norm(cl[k2]))) k2++;
             if (k2 > 0) { ctx.push(cl.slice(0, k2).join("，")); txt = tidy(cl.slice(k2).join("，")); }
           }
           tasks.push({ text: txt, due: d0 ? { ms: dueMs(d0, o), hasTime: d0.hasTime, event: ev, before: !!d0.before } : null });
@@ -356,7 +415,7 @@
     return left > 10 * 60000 ? now + Math.round(left / 2 / 60000) * 60000 : null;
   }
 
-  const api = { looks, parse, _dues: (t, ref, o) => dues(norm(t), ref, o || {}) };
+  const api = { looks, parse, parseTimes, _dues: (t, ref, o) => { useOpts(o); return dues(norm(t), ref, o || {}); } };
   g.NOTICE = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -44,3 +44,22 @@ E.forEach(([t, want]) => {
   console.log((ok ? "ok  " : "BAD ") + t + " → " + got + (ok ? "" : "  (want " + want + ")") + "  | " + (r.tasks[0] ? r.tasks[0].text : "(no task)") + " looks=" + N.looks(t));
 });
 if (bad) { console.log(bad + " failing"); process.exitCode = 1; }
+
+// The user's own words (Settings → Notes → custom words).
+const C = { verbs: "报账\n盖章", prefixes: "各项目部\n各钻井队", times: "交班前 = 08:00\n例会前 = 周日 07:30\n晚班前＝19点半\n坏的一行" };
+const pt = N.parseTimes(C.times);
+console.log("\ncustom times ok=" + pt.ok.length + " bad=" + JSON.stringify(pt.bad));
+if (pt.ok.length !== 3 || pt.bad.length !== 1) { console.log("BAD parseTimes"); process.exitCode = 1; }
+const CE = [
+  ["请各项目部交班前把票据报账", "11/25 08:00", "把票据报账"],
+  ["例会前各钻井队盖章确认", "11/29 07:30", "盖章确认"],
+  ["11月26日晚班前提交日报", "11/26 19:30", "提交日报"],
+];
+CE.forEach(([t, want, wantText]) => {
+  const r = N.parse(t, ref, Object.assign({ now: ref }, C));
+  const d = r.tasks[0] && r.tasks[0].due;
+  const got = d ? (() => { const x = new Date(d.ms); return `${x.getMonth() + 1}/${x.getDate()} ${String(x.getHours()).padStart(2, "0")}:${String(x.getMinutes()).padStart(2, "0")}`; })() : "-";
+  const txt = r.tasks[0] ? r.tasks[0].text : "";
+  const ok = got === want && txt === wantText; if (!ok) process.exitCode = 1;
+  console.log((ok ? "ok  " : "BAD ") + t + " → " + got + " | " + txt + " looks=" + N.looks(t, C) + " (without words: " + N.looks(t) + ")");
+});

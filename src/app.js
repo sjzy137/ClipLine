@@ -197,7 +197,7 @@ const tintOf = (k) => TINTS.find((x) => x.key === k) || TINTS[0];
 
 /* ---------- state ---------- */
 let state = { clips: [], notes: [], done: [], cats: null, ordered: true, desk: [] };
-let cfg = { history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"], todo_badge: true, todo_paste: true, todo_lead_min: 60, todo_date_days: 0, todo_date_time: "09:00", todo_noon_off: "12:00", todo_work_off: "17:30" };
+let cfg = { history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"], todo_badge: true, todo_paste: true, todo_lead_min: 60, todo_date_days: 0, todo_date_time: "09:00", todo_noon_off: "12:00", todo_work_off: "17:30", todo_verbs: "", todo_prefixes: "", todo_times: "" };
 const FONTS = {
   default: '-apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif',
   yahei: '"Microsoft YaHei", "Segoe UI", sans-serif',
@@ -1670,14 +1670,19 @@ function convertToNote(item) {
 
 /* ---------- notices → to-dos (notice.js) ---------- */
 const noticeSeen = new Map(); // text → looks(); cards are rebuilt on every render
+let noticeSig = "";
 function looksNotice(text) {
   if (!window.NOTICE) return false;
+  const o = noticeOpts();
+  const sig = [o.verbs, o.prefixes, o.times, o.noonOff, o.workOff].join("\u0001");
+  if (sig !== noticeSig) { noticeSeen.clear(); noticeSig = sig; } // own words changed in Settings
   let v = noticeSeen.get(text);
-  if (v === undefined) { v = NOTICE.looks(text); if (noticeSeen.size > 500) noticeSeen.clear(); noticeSeen.set(text, v); }
+  if (v === undefined) { v = NOTICE.looks(text, o); if (noticeSeen.size > 500) noticeSeen.clear(); noticeSeen.set(text, v); }
   return v;
 }
 function noticeOpts() {
-  return { leadMin: cfg.todo_lead_min ?? 60, dateDays: cfg.todo_date_days ?? 0, dateTime: cfg.todo_date_time || "09:00", noonOff: cfg.todo_noon_off || "12:00", workOff: cfg.todo_work_off || "17:30" };
+  return { leadMin: cfg.todo_lead_min ?? 60, dateDays: cfg.todo_date_days ?? 0, dateTime: cfg.todo_date_time || "09:00", noonOff: cfg.todo_noon_off || "12:00", workOff: cfg.todo_work_off || "17:30",
+    verbs: cfg.todo_verbs || "", prefixes: cfg.todo_prefixes || "", times: cfg.todo_times || "" };
 }
 function noticeToast(r) {
   if (!r.tasks.length) return t("todoNone");
@@ -1701,7 +1706,7 @@ function onEditorPaste(e) {
   hidePasteTodo();
   if (!editing || editing._clip || cfg.todo_paste === false || !window.NOTICE) return;
   const text = ((e.clipboardData && e.clipboardData.getData("text/plain")) || "").replace(/\r\n?/g, "\n");
-  if (!text.trim() || !NOTICE.looks(text)) return;
+  if (!text.trim() || !NOTICE.looks(text, noticeOpts())) return;
   const start = e.target.selectionStart;
   const r = NOTICE.parse(text, Date.now(), noticeOpts());
   if (!r.tasks.length) return;

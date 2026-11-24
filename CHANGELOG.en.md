@@ -9,6 +9,7 @@ Newest first. This file is built into the app and is what Settings → About →
 - **Two ways in**: a text card that reads like a notice gets a "☑ To-do" mark at its lower left — click it and the editor opens with everything filled in, ready to check and save (or right-click any text card → Make to-dos). Or paste the notice straight into the note editor and click "Make to-dos" in the bar that appears; `Ctrl+Z` undoes it.
 - Understood: `11月27日`, `2026年12月13日`, `12.1`, a bare `23日（下周一）`, 今天 / 明天 / 后天, 本周五 / 下周一, 本周内, 月底; `14:30`, 下午3点半, 上午下班前, 下班前. "Today" and "tomorrow" count from when you copied the text. Notices split by `①②③`, `1. 2.` or `一、二、` give one to-do per item.
 - **Adjustable reminders** (Settings → Notes → Notices to to-dos): with a clock time, 1 hour before by default (15 min to 1 day, or any number of minutes); date only, 9:00 that day by default (or the day before, or custom); "lunch break" and "close of work" use the times you set (12:00 / 17:30 by default). With several deadlines the reminder goes on the earliest one still ahead; past ones are marked as such.
+- **Your own words** (same page): add what the built-in rules miss, one per line — action words (报账, 盖章), addressees to drop (各项目部) and time phrases (`交班前 = 08:00`, `例会前 = 周日 07:30`). Lines it can't read are flagged in red.
 - Entirely offline and rule-based — nothing is sent anywhere. If it gets something wrong, fix it in the editor.
 
 ## v1.12.0 · 2026-11-10
