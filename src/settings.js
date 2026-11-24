@@ -17,6 +17,10 @@ const I = {
     secWatch: "监听文件夹", addFolder: "添加文件夹", watchHint: "这些文件夹新增文件会自动上绳", noFolders: "（未添加）",
     secFont: "字体", fontFamily: "字体", fontSize: "字号", fsSmall: "小", fsMedium: "中", fsLarge: "大",
     fDefault: "系统默认", fYahei: "微软雅黑", fDengxian: "等线", fSource: "思源黑体", fSimsun: "宋体", fKaiti: "楷体", fFangsong: "仿宋",
+    secTodo: "通知转待办", todoBadge: "剪贴板卡片显示「待办」标记", todoBadgeSub: "复制的文字像群通知（有要做的事、有时间）时，卡片左下角出现标记，点一下生成待办便签；右键「生成待办」不受这个开关影响", todoPaste: "粘贴通知到便签时提示转换", todoPasteSub: "在便签编辑器里粘贴群通知，底部会出现「转成待办」",
+    todoLead: "有具体时间的，提前", todoLeadSub: "如「今天下午 14:30 开会」「明天上午下班前上报」", todoDate: "只有日期的，提醒在", todoDateSub: "如「11月27日前反馈」「本周内领取」；那个时间已过时，改为下班前按上一项提前量提醒",
+    todoHours: "下班时间", todoHoursSub: "「上午下班前」「下班前」「今天务必」按这里换算", todoNoon: "上午", todoWork: "下午",
+    l15: "15 分钟", l30: "30 分钟", l60: "1 小时", l120: "2 小时", l1440: "1 天", custom: "自定义", minutes: "分钟", d0_8: "当天 8:00", d0_9: "当天 9:00", d1_9: "前一天 9:00", d1_17: "前一天 17:00", daysBefore: "提前", daysAt: "天，时间",
     secRemind: "提醒快捷项", remindHint: "勾选在便签提醒面板里显示的快捷时间",
     p_m5: "5 分钟后", p_m10: "10 分钟后", p_m15: "15 分钟后", p_m30: "30 分钟后", p_h1: "1 小时后", p_h2: "2 小时后", p_h3: "3 小时后", p_tonight: "今晚 20:00", p_tomorrow: "明天此时", p_tomorrow9: "明早 9:00", p_nextweek: "下周此时",
     secHelp: "使用说明", secAbout: "关于", save: "保存", cancel: "取消",
@@ -45,6 +49,10 @@ const I = {
     secWatch: "Watched folders", addFolder: "Add folder", watchHint: "New files in these folders hang automatically", noFolders: "(none)",
     secFont: "Font", fontFamily: "Typeface", fontSize: "Size", fsSmall: "S", fsMedium: "M", fsLarge: "L",
     fDefault: "System", fYahei: "Microsoft YaHei", fDengxian: "DengXian", fSource: "Source Han Sans", fSimsun: "SimSun", fKaiti: "KaiTi", fFangsong: "FangSong",
+    secTodo: "Notices to to-dos", todoBadge: "Mark notice-like clipboard cards", todoBadgeSub: "When copied text reads like a group notice (something to do, a time), the card gets a mark at its lower left; click it to make a to-do note. Right-click → Make to-dos works either way", todoPaste: "Offer to convert notices pasted into a note", todoPasteSub: "Paste a group notice in the note editor and a \"Make to-dos\" bar appears",
+    todoLead: "With a clock time, remind", todoLeadSub: "e.g. a meeting at 14:30, or \"report by lunch break today\"", todoDate: "Date only, remind at", todoDateSub: "e.g. \"reply by 27 Nov\"; if that time has passed, it falls back to the lead above before the end of the working day",
+    todoHours: "Working hours end", todoHoursSub: "Used for \"before the lunch break\", \"before close of work\" and \"today\"", todoNoon: "Morning", todoWork: "Afternoon",
+    l15: "15 min", l30: "30 min", l60: "1 hour", l120: "2 hours", l1440: "1 day", custom: "Custom", minutes: "min before", d0_8: "Same day 8:00", d0_9: "Same day 9:00", d1_9: "Day before 9:00", d1_17: "Day before 17:00", daysBefore: "", daysAt: "day(s) before, at",
     secRemind: "Reminder presets", remindHint: "Pick the quick times shown in the note reminder popover",
     p_m5: "In 5 min", p_m10: "In 10 min", p_m15: "In 15 min", p_m30: "In 30 min", p_h1: "In 1 hour", p_h2: "In 2 hours", p_h3: "In 3 hours", p_tonight: "Tonight 20:00", p_tomorrow: "Tomorrow, same time", p_tomorrow9: "Tomorrow 9:00", p_nextweek: "Next week",
     secHelp: "How to use", secAbout: "About", save: "Save", cancel: "Cancel",
@@ -254,6 +262,8 @@ function pageNotes(body) {
   s1.appendChild(row(t("bagDays"), seg(draft.history_days, [[7, "7"], [30, "30"], [90, "90"], [365, "365"], [0, t("forever")]], (v) => draft.history_days = parseInt(v, 10)), t("bagDaysSub")));
   body.appendChild(s1);
 
+  body.appendChild(sectionTodo());
+
   const sr = section(t("secRemind"));
   const rh = document.createElement("div"); rh.className = "sub"; rh.style.marginBottom = "8px"; rh.textContent = t("remindHint"); sr.appendChild(rh);
   const cg = document.createElement("div"); cg.className = "check-grid";
@@ -272,6 +282,62 @@ function pageNotes(body) {
   });
   sr.appendChild(cg);
   body.appendChild(sr);
+}
+
+/* Notices → to-dos: lead times and working hours (see notice.js). */
+function hhmmIn(val, onOk) {
+  const i = document.createElement("input"); i.className = "set-select"; i.style.width = "64px"; i.value = val; i.spellcheck = false;
+  i.oninput = () => { const m = i.value.trim().replace("：", ":").match(/^(\d{1,2}):(\d{2})$/); const ok = m && +m[1] < 24 && +m[2] < 60; i.style.borderColor = ok ? "" : "#c0392b"; if (ok) onOk(m[1].padStart(2, "0") + ":" + m[2]); };
+  return i;
+}
+function numIn(val, max, onOk) {
+  const i = document.createElement("input"); i.className = "set-select"; i.style.width = "60px"; i.type = "number"; i.min = "0"; i.max = String(max); i.value = val;
+  i.oninput = () => { const n = parseInt(i.value, 10); const ok = n >= 0 && n <= max; i.style.borderColor = ok ? "" : "#c0392b"; if (ok) onOk(n); };
+  return i;
+}
+function vbox() { const d = document.createElement("div"); d.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;gap:6px"; return d; }
+function hbox() { const d = document.createElement("div"); d.style.cssText = "display:flex;align-items:center;gap:6px;font-size:13px"; return d; }
+function sectionTodo() {
+  const st = section(t("secTodo"));
+  st.appendChild(row(t("todoBadge"), switchEl(draft.todo_badge !== false, (v) => draft.todo_badge = v), t("todoBadgeSub")));
+  st.appendChild(row(t("todoPaste"), switchEl(draft.todo_paste !== false, (v) => draft.todo_paste = v), t("todoPasteSub")));
+
+  // Lead before a clock time: presets + custom minutes.
+  const LEADS = [15, 30, 60, 120, 1440];
+  const lw = vbox(), lc = hbox();
+  const ln = numIn(draft.todo_lead_min, 10080, (n) => draft.todo_lead_min = n);
+  lc.appendChild(ln); lc.appendChild(document.createTextNode(t("minutes")));
+  const leadKey = LEADS.includes(draft.todo_lead_min) ? draft.todo_lead_min : "c";
+  lc.hidden = leadKey !== "c";
+  lw.appendChild(seg(leadKey, LEADS.map((v) => [v, t("l" + v)]).concat([["c", t("custom")]]), (v) => {
+    if (v === "c") { lc.hidden = false; ln.focus(); return; }
+    lc.hidden = true; draft.todo_lead_min = parseInt(v, 10); ln.value = draft.todo_lead_min;
+  }));
+  lw.appendChild(lc);
+  st.appendChild(row(t("todoLead"), lw, t("todoLeadSub")));
+
+  // Date-only: N days before, at HH:MM.
+  const DATES = [["0|08:00", "d0_8"], ["0|09:00", "d0_9"], ["1|09:00", "d1_9"], ["1|17:00", "d1_17"]];
+  const cur = (draft.todo_date_days || 0) + "|" + (draft.todo_date_time || "09:00");
+  const dw = vbox(), dc = hbox();
+  if (t("daysBefore")) dc.appendChild(document.createTextNode(t("daysBefore")));
+  const dn = numIn(draft.todo_date_days || 0, 30, (n) => draft.todo_date_days = n); dc.appendChild(dn);
+  dc.appendChild(document.createTextNode(t("daysAt")));
+  const dt = hhmmIn(draft.todo_date_time || "09:00", (v) => draft.todo_date_time = v); dc.appendChild(dt);
+  const dateKey = DATES.some(([k]) => k === cur) ? cur : "c";
+  dc.hidden = dateKey !== "c";
+  dw.appendChild(seg(dateKey, DATES.map(([k, l]) => [k, t(l)]).concat([["c", t("custom")]]), (v) => {
+    if (v === "c") { dc.hidden = false; return; }
+    dc.hidden = true; const [d, tm] = v.split("|"); draft.todo_date_days = parseInt(d, 10); draft.todo_date_time = tm; dn.value = d; dt.value = tm;
+  }));
+  dw.appendChild(dc);
+  st.appendChild(row(t("todoDate"), dw, t("todoDateSub")));
+
+  const hw = hbox();
+  hw.appendChild(document.createTextNode(t("todoNoon"))); hw.appendChild(hhmmIn(draft.todo_noon_off || "12:00", (v) => draft.todo_noon_off = v));
+  hw.appendChild(document.createTextNode(t("todoWork"))); hw.appendChild(hhmmIn(draft.todo_work_off || "17:30", (v) => draft.todo_work_off = v));
+  st.appendChild(row(t("todoHours"), hw, t("todoHoursSub")));
+  return st;
 }
 
 function pageLook(body) {
@@ -408,7 +474,7 @@ window.addEventListener("unhandledrejection", (e) => { const el = document.getEl
 (async function boot() {
   try { const s = await invoke("get_settings"); if (s) cfg = JSON.parse(s); } catch (e) {}
   try { monitors = (await invoke("list_monitors")) || []; } catch (e) {}
-  draft = Object.assign({ history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"], drop_to_hang: true, text_drag_ext: "txt", accent: "terra", move_mod: "shift", fold_by_date: true, hotkey_shot: "Ctrl+Alt+S", tray_icon: "a", update_mode: "notify", skipped_version: "", line_display: "cursor" }, cfg);
+  draft = Object.assign({ history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"], drop_to_hang: true, text_drag_ext: "txt", accent: "terra", move_mod: "shift", fold_by_date: true, hotkey_shot: "Ctrl+Alt+S", tray_icon: "a", update_mode: "notify", skipped_version: "", line_display: "cursor", todo_badge: true, todo_paste: true, todo_lead_min: 60, todo_date_days: 0, todo_date_time: "09:00", todo_noon_off: "12:00", todo_work_off: "17:30" }, cfg);
   document.documentElement.dataset.accent = draft.accent || "terra";
   previewFont(draft.font_family);
   LANG = pickLang(draft);

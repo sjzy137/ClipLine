@@ -68,6 +68,14 @@ struct Settings {
     skipped_version: String,       // "Skip this version" — not offered again by the background check
     line_display: String,          // cursor | primary | a monitor device name (\\.\DISPLAY2)
     seen_version: String,          // last version whose "updated to vX" card was shown ("" = before v1.7.0)
+    // Notices → to-dos (src/notice.js)
+    todo_badge: bool,       // mark notice-like text cards
+    todo_paste: bool,       // offer conversion when a notice is pasted into a note
+    todo_lead_min: u32,     // remind this many minutes before a due with a clock time
+    todo_date_days: u32,    // date-only due: remind N days before…
+    todo_date_time: String, // …at HH:MM
+    todo_noon_off: String,  // "上午下班" HH:MM
+    todo_work_off: String,  // "下班" HH:MM
 }
 
 impl Default for Settings {
@@ -99,6 +107,13 @@ impl Default for Settings {
             skipped_version: String::new(),
             line_display: "cursor".into(),
             seen_version: String::new(),
+            todo_badge: true,
+            todo_paste: true,
+            todo_lead_min: 60,
+            todo_date_days: 0,
+            todo_date_time: "09:00".into(),
+            todo_noon_off: "12:00".into(),
+            todo_work_off: "17:30".into(),
         }
     }
 }

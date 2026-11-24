@@ -246,6 +246,17 @@ html, body {
 .tint.on { border-color: var(--ink); transform: scale(1.12); }
 .editor-close { border: none; background: rgba(0,0,0,0.06); width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 12px; }
 #editorBody { border: none; outline: none; background: transparent; resize: none; height: 230px; padding: 4px 16px 12px; font-size: calc(14px * var(--fs, 1)); line-height: 1.6; color: var(--editor-ink, var(--ink)); -webkit-user-select: text; user-select: text; }
+/* notices → to-dos */
+.todo-chip { position: absolute; left: 6px; bottom: 6px; z-index: 4; border: none; border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; line-height: 16px; cursor: pointer; color: #fff; background: var(--clay); opacity: 0.88;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
+.todo-chip:hover { opacity: 1; transform: scale(1.04); }
+.paste-todo { display: flex; align-items: center; gap: 8px; padding: 7px 14px; font-size: 12px; color: var(--ink);
+  background: var(--clay-tint, #fbeee8); border-top: 1px solid rgba(0,0,0,0.07); }
+.paste-todo[hidden] { display: none; }
+.paste-todo span { flex: 1; }
+.paste-todo button { border: none; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; background: rgba(0,0,0,0.06); }
+.paste-todo button.primary { background: var(--clay); color: #fff; }
 .editor-foot { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid rgba(0,0,0,0.07); }
 .editor-foot .hint { font-size: 11px; color: var(--ink-soft); flex: 1; }
 .editor-foot button { border: none; border-radius: 999px; padding: 6px 14px; font-size: 12px; cursor: pointer; background: rgba(0,0,0,0.06); }

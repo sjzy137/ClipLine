@@ -87,7 +87,7 @@ const I18N = {
     take: "取下", preview: "预览", edit: "编辑", confirmTake: "确认取下钉住的卡？", dragSort: "按住夹子左右拖动排序", dragSortPull: "按住夹子：左右拖动排序，往下拉钉到桌面", dragPull: "按住夹子往下拉，钉到桌面", pullPin: "松手钉到桌面", deskPin: "钉到桌面", deskOn: "已钉在桌面", deskShow: "显示桌面上的这张", deskNo: "文件卡不能钉到桌面", deskFail: "钉到桌面失败: ", takeDelete: "取下（删除原文件）", confirmTrash: "将 {n} 个原文件移到回收站，并从绳上取下？", toTrash: "移到回收站", trashed: "已移到回收站", trashFail: "删除失败: ",
     copy: "复制", copyImg: "复制图片", copyPath: "复制文件地址",
     pin: "收藏（钉住）", unpin: "取消收藏", favOn: "已收藏，不会被自动清理", favOff: "已取消收藏", noFav: "还没有收藏：鼠标移到卡片上，点右下角 ☆", reveal: "在资源管理器中显示", openIt: "打开",
-    openLink: "在浏览器打开", saveDesktop: "保存到桌面", toNote: "转为便签",
+    openLink: "在浏览器打开", saveDesktop: "保存到桌面", toNote: "转为便签", toTodo: "生成待办", todoChip: "待办", todoChipTip: "像是一条通知 · 点一下生成待办便签", todoMade: "认出 {n} 项待办", todoAt: "，{when} 提醒", todoNoDue: "，没找到还没过的截止时间", todoNone: "没认出要做的事，已按原文打开", pasteTodo: "这段像是通知：{n} 项待办", pasteTodoGo: "转成待办",
     editorPh: "写点什么…\n第一行是标题，支持 Markdown（**粗体**、# 标题、- 列表）\n点上方 ☑ 或输入 - [ ] 加待办，卡片上点方框打勾",
     nextPage: "下一屏", shotLabel: "截图", blankNote: "（空白便签）", todoProg: "待办完成进度",
     moreLines: "还有 {n} 行", moreTip: "滚轮查看其余内容 · 单击打开阅读视图", readEdit: "✎ 编辑", readEditTip: "编辑这张便签（也可以双击便签）", readHint: "Esc 或点空白处关闭 · 双击便签直接编辑",
@@ -133,7 +133,7 @@ const I18N = {
     take: "Remove", preview: "Preview", edit: "Edit", confirmTake: "Remove pinned card?", dragSort: "Hold the clip and slide to reorder", dragSortPull: "Hold the clip: slide to reorder, pull down to pin it to the desktop", dragPull: "Hold the clip and pull down to pin it to the desktop", pullPin: "Let go to pin to the desktop", deskPin: "Pin to desktop", deskOn: "Pinned to the desktop", deskShow: "Show it on the desktop", deskNo: "File cards can't be pinned to the desktop", deskFail: "Couldn't pin: ", takeDelete: "Remove & delete original", confirmTrash: "Move {n} original file(s) to the Recycle Bin and take the card down?", toTrash: "Move to Recycle Bin", trashed: "Moved to Recycle Bin", trashFail: "Delete failed: ",
     copy: "Copy", copyImg: "Copy image", copyPath: "Copy file path",
     pin: "Favourite (pin)", unpin: "Remove favourite", favOn: "Favourited — kept from auto-cleanup", favOff: "Removed from favourites", noFav: "No favourites yet: hover a card and click ☆ at the bottom right", reveal: "Show in Explorer", openIt: "Open",
-    openLink: "Open in browser", saveDesktop: "Save to Desktop", toNote: "Turn into note",
+    openLink: "Open in browser", saveDesktop: "Save to Desktop", toNote: "Turn into note", toTodo: "Make to-dos", todoChip: "To-do", todoChipTip: "Looks like a notice · click to make a to-do note", todoMade: "Found {n} to-do(s)", todoAt: ", reminder {when}", todoNoDue: ", no upcoming deadline found", todoNone: "No to-dos recognised — opened as is", pasteTodo: "Looks like a notice: {n} to-do(s)", pasteTodoGo: "Make to-dos",
     editorPh: "Write something…\nFirst line is the title; Markdown works (**bold**, # heading, - list)\nClick ☑ above or type - [ ] for a to-do, then tick it on the card",
     nextPage: "Next", shotLabel: "Snip", blankNote: "(Blank note)", todoProg: "To-dos done",
     moreLines: "{n} more lines", moreTip: "Scroll for the rest · click to open the reading view", readEdit: "✎ Edit", readEditTip: "Edit this note (or double-click the note)", readHint: "Esc or click outside to close · double-click a note to edit it",
@@ -197,7 +197,7 @@ const tintOf = (k) => TINTS.find((x) => x.key === k) || TINTS[0];
 
 /* ---------- state ---------- */
 let state = { clips: [], notes: [], done: [], cats: null, ordered: true, desk: [] };
-let cfg = { history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"] };
+let cfg = { history_days: 30, hotkey_clip: "Ctrl+Alt+C", hotkey_notes: "Ctrl+Alt+N", hover_enabled: true, dwell_ms: 250, flip_mod: "shift", retention_days: 30, lang: "auto", autostart: false, theme: "soft", watch_folders: [], font_family: "default", font_size: "medium", reminder_presets: ["m15", "h1", "tomorrow"], todo_badge: true, todo_paste: true, todo_lead_min: 60, todo_date_days: 0, todo_date_time: "09:00", todo_noon_off: "12:00", todo_work_off: "17:30" };
 const FONTS = {
   default: '-apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif',
   yahei: '"Microsoft YaHei", "Segoe UI", sans-serif',
@@ -1034,6 +1034,12 @@ function buildClipCard(item) {
   } else {
     const d = document.createElement("div"); d.className = "c-text" + (item.vis === "code" ? " code" : "");
     d.textContent = item.text || ""; body.appendChild(d);
+    if (item.vis === "text" && cfg.todo_badge !== false && looksNotice(item.text)) {
+      const b = document.createElement("button"); b.className = "todo-chip"; b.textContent = "☑ " + t("todoChip"); b.title = t("todoChipTip");
+      b.addEventListener("click", (e) => { e.stopPropagation(); noticeToNote(item); });
+      b.addEventListener("dblclick", (e) => e.stopPropagation());
+      body.appendChild(b);
+    }
   }
 
   addCorners(card, body, item, false);
@@ -1625,6 +1631,7 @@ function showCtx(e, item, isNote) {
         add(item.note ? t("editNote") : t("addNote"), () => openClipEditor(item, true));
       }
       add(t("toNote"), () => convertToNote(item));
+      if (item.vis === "text" || item.vis === "code") add(t("toTodo"), () => noticeToNote(item));
       add(t("saveDesktop"), () => saveDesktop(item));
     }
   }
@@ -1659,6 +1666,63 @@ function convertToNote(item) {
   const note = { id: "n" + Date.now() + "-" + Math.floor(Math.random() * 1e6), tint: null, body: item.text || "", pinned: false, ts: Date.now(), remindAt: null, reminded: false };
   state.notes.unshift(note); save();
   setDeck("notes"); render(); toast(t("toNote"));
+}
+
+/* ---------- notices → to-dos (notice.js) ---------- */
+const noticeSeen = new Map(); // text → looks(); cards are rebuilt on every render
+function looksNotice(text) {
+  if (!window.NOTICE) return false;
+  let v = noticeSeen.get(text);
+  if (v === undefined) { v = NOTICE.looks(text); if (noticeSeen.size > 500) noticeSeen.clear(); noticeSeen.set(text, v); }
+  return v;
+}
+function noticeOpts() {
+  return { leadMin: cfg.todo_lead_min ?? 60, dateDays: cfg.todo_date_days ?? 0, dateTime: cfg.todo_date_time || "09:00", noonOff: cfg.todo_noon_off || "12:00", workOff: cfg.todo_work_off || "17:30" };
+}
+function noticeToast(r) {
+  if (!r.tasks.length) return t("todoNone");
+  return t("todoMade").replace("{n}", r.tasks.length) + (r.remindAt ? t("todoAt").replace("{when}", fmtWhen(r.remindAt)) : (r.tasks.some((x) => x.due) || r.tasks.length ? t("todoNoDue") : ""));
+}
+/* A clip card → a new note in the editor, to-dos and reminder filled in; nothing is kept until the editor closes. */
+function noticeToNote(item) {
+  const r = NOTICE.parse(item.text || "", item.ts || Date.now(), noticeOpts());
+  const note = { id: "n" + Date.now() + "-" + Math.floor(Math.random() * 1e6), tint: null, body: r.tasks.length ? r.body : (item.text || ""), pinned: false, ts: Date.now(), remindAt: r.remindAt || null, reminded: false, _new: true };
+  setDeck("notes"); render();
+  setTimeout(() => {
+    editing = note; openEditorFor(note); toast(noticeToast(r));
+    // Start at the to-dos, not at the end of the quoted original.
+    setTimeout(() => { const ta = $("editorBody"); ta.setSelectionRange(0, 0); ta.scrollTop = 0; }, 60);
+  }, 150);
+}
+/* Pasting a notice into a note offers the same conversion (one click, Ctrl+Z undoes it). */
+let pasteNotice = null;
+function hidePasteTodo() { pasteNotice = null; const b = $("pasteTodo"); if (b) b.hidden = true; }
+function onEditorPaste(e) {
+  hidePasteTodo();
+  if (!editing || editing._clip || cfg.todo_paste === false || !window.NOTICE) return;
+  const text = ((e.clipboardData && e.clipboardData.getData("text/plain")) || "").replace(/\r\n?/g, "\n");
+  if (!text.trim() || !NOTICE.looks(text)) return;
+  const start = e.target.selectionStart;
+  const r = NOTICE.parse(text, Date.now(), noticeOpts());
+  if (!r.tasks.length) return;
+  pasteNotice = { start, text, r };
+  $("pasteTodoText").textContent = t("pasteTodo").replace("{n}", r.tasks.length);
+  $("pasteTodoGo").textContent = t("pasteTodoGo");
+  $("pasteTodo").hidden = false;
+}
+function applyPasteTodo() {
+  const p = pasteNotice; if (!p || !editing) return hidePasteTodo();
+  const ta = $("editorBody"), v = ta.value;
+  let at = v.slice(p.start, p.start + p.text.length) === p.text ? p.start : v.indexOf(p.text);
+  if (at < 0) return hidePasteTodo();
+  edReplace(at, at + p.text.length, p.r.body, at + p.r.body.length, at + p.r.body.length);
+  const ra = p.r.remindAt;
+  if (ra && (!editing.remindAt || editing.remindAt < Date.now() || ra < editing.remindAt)) {
+    editing.remindAt = ra; editing.fired = false; editing.acked = false;
+    $("bellText").textContent = fmtWhen(ra);
+  }
+  toast(noticeToast(p.r));
+  hidePasteTodo();
 }
 
 /* ---------- preview ---------- */
@@ -1705,6 +1769,7 @@ function openEditorFor(note) {
   sheet.style.setProperty("--editor-bg", tt.bg); sheet.style.setProperty("--editor-ink", tt.ink);
   const ta = $("editorBody"); ta.value = note.body || ""; ta.placeholder = note._clip ? t("editorPhClip") : t("editorPh");
   $("bellText").textContent = note.remindAt ? fmtWhen(note.remindAt) : t("remind");
+  hidePasteTodo();
   renderCatChip(note);
   const hint = document.querySelector(".editor-foot .hint"); if (hint) hint.textContent = t(note._clip ? "editorHint" : "editorHintNote");
   $("editor").hidden = false; refreshModal();
@@ -1714,6 +1779,7 @@ function closeEditor() {
   // A line dropped "sticky" for editing (reminder → open, OCR result, new note
   // from the tray) returns to normal auto-retract once editing is done.
   invoke("set_sticky", { on: false }).catch(() => {});
+  hidePasteTodo();
   if (!editing) { $("editor").hidden = true; return; }
   setPreview(false);
   if (editing._clip) {
@@ -1834,6 +1900,9 @@ function setPreview(on) {
   if (!edPreview && !$("editor").hidden) ta.focus();
 }
 /* Lists continue on Enter (an empty item ends the list); Tab / Shift+Tab indent. */
+$("editorBody").addEventListener("paste", onEditorPaste);
+$("pasteTodoGo").addEventListener("click", (e) => { e.stopPropagation(); applyPasteTodo(); });
+$("pasteTodoX").addEventListener("click", (e) => { e.stopPropagation(); hidePasteTodo(); $("editorBody").focus(); });
 $("editorBody").addEventListener("keydown", (e) => {
   if (!editing || editing._clip || e.isComposing || e.keyCode === 229) return;
   const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
