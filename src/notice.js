@@ -105,7 +105,8 @@
   const R_D = /(?<![\d月.\/-])(\d{1,2})\s*[日号](?=\s*(?:前|之前|以前|（|\(|周|星期|礼拜|上午|下午|中午|早|晚|下班|\d{1,2}[:点时]|，|,|。|；|\s|$))/g;
   const R_REL = /今天|今日|当天|当日|明天|明日|后天|大后天/g;
   const R_WEEK = /(本|这|下个?|上)?\s*(?:周|星期|礼拜)\s*([一二三四五六日天1-7])(?=\s*(?:前|之前|以前|（|\(|上午|下午|中午|早|晚|下班|\d|，|,|。|；|\s|$|[)）]))/g;
-  const R_WEEK0 = /(本周|这周|本星期|这个星期|下周|下星期)(?!\s*[一二三四五六日天1-7])/g;
+  // "本周内 / 本周尽快 / 下周前" is a deadline; "本周数据 / 本周工作" is not.
+  const R_WEEK0 = /(本周|这周|本星期|这个星期|下周|下星期)(?=\s*(?:内|之内|前|之前|以前|尽快|务必|抓紧|完成|下班|结束|，|,|。|；|;|\s|$))/g;
   const R_MEND = /(?:本月|这个月)(?:底|末)|月底|月末|年底|年末/g;
   const R_TIME = /(上午|早上|早晨|中午|下午|傍晚|晚上|今晚)?\s*(\d{1,2})\s*(?::\s*(\d{2})|[点时]\s*(半|(\d{1,2})\s*分?)?)|(上午下班|午饭|中午下班)\s*(?:前|之前)|(下午下班|下班)\s*(?:前|之前)?|(中午)\s*(?:前|之前|12点)|(上午|下午)(?=\s*(?:前|之前))/g;
 
@@ -235,13 +236,27 @@
     });
     // Swallow the words around the span: 于 / 在 before, 前 / 之前 after.
     res.forEach((r) => {
-      const after = n.slice(r.end).match(/^\s*(?:之前|以前|前)/);
+      const after = n.slice(r.end).match(/^\s*(?:之内|之前|以前|前|内)/);
       if (after) { r.end += after[0].length; r.before = true; }
       const bef = n.slice(Math.max(0, r.i - 6), r.i).match(/(?:并于|并在|须于|需于|应于|请于|务必于|于|在|截[止至](?:日期|时间)?(?:为|是)?:?)\s*$/);
       if (bef) { r.i -= bef[0].length; if (/截/.test(bef[0])) r.before = true; }
       if (!r.before && /截[止至]/.test(n.slice(Math.max(0, r.i - 8), r.i))) r.before = true;
     });
-    return res.sort((a, b) => a.i - b.i);
+    // "今日下班前（11月24日）" / "11月24日（今天）": a date in brackets right after a due restates it.
+    res.sort((a, b) => a.i - b.i);
+    for (let k = 0; k < res.length - 1; k++) {
+      const r = res[k], q = res[k + 1];
+      const br = n.slice(r.end).match(/^\s*[（(]/);
+      if (!br || q.i < r.end || q.i > r.end + br[0].length + 2) continue;
+      const close = n.slice(q.end).match(/^[^（()）]{0,4}[）)]/);
+      if (!close) continue;
+      if (!r.hasTime && q.hasTime) { r.date = q.date; r.hasTime = true; }
+      r.end = q.end + close[0].length;
+      const after = n.slice(r.end).match(/^\s*(?:之前|以前|前)/);
+      if (after) { r.end += after[0].length; r.before = true; }
+      res.splice(k + 1, 1); k--;
+    }
+    return res;
   }
   /* Deadline as an instant: date-only = end of that working day. */
   function dueMs(d, o) {
@@ -268,7 +283,9 @@
     const out = []; let buf = "";
     for (let k = 0; k < s.length; k++) {
       const c = s[k];
-      if (/[。！!？?；;\n]/.test(c) || (c === " " && s[k + 1] === " " && buf.trim())) {
+      // WeChat notices often use a space between sentences: one space between two Chinese characters counts.
+      const cjk = (x) => /[\u4e00-\u9fff]/.test(x || "");
+      if (/[。！!？?；;\n]/.test(c) || (c === " " && buf.trim() && (s[k + 1] === " " || (cjk(s[k - 1]) && cjk(s[k + 1]))))) {
         if (c !== " " && c !== "\n") buf += c;
         if (buf.trim()) out.push(buf); buf = "";
         while (s[k + 1] === " ") k++;

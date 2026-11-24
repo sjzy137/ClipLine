@@ -2,6 +2,12 @@
 
 Newest first. This file is built into the app and is what Settings → About → "Update history" shows; the Chinese version is `CHANGELOG.md` — keep the two in step.
 
+## v1.13.1 · 2026-11-24
+
+### 🐞 Fixes
+- Notices to to-dos: "…包含**本周数据**…所报材料务必今日下班前（11月24日）报送完毕" was read as due 27 Nov. "本周 / 下周" now only counts as a deadline when followed by 内 / 前 / 尽快 / 完成 or a break, so "本周数据" no longer does; a date in brackets right after a time ("今日下班前（11月24日）") is merged with it instead of leaving empty brackets in the to-do.
+- A single space between two sentences (common in WeChat notices) now splits them, so background no longer runs into the to-do; "本周内" no longer leaves "内" in the text.
+
 ## v1.13.0 · 2026-11-24
 
 ### 📋 Group notices become to-dos
